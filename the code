@@ -1,0 +1,415 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local TeleportEnabled = false
+local teleportCoroutine
+local safePosition = Vector3.new(166, -0, -956)
+local emergencyPosition = Vector3.new(-532, -0, -585)
+local startTeleportPosition = Vector3.new(-609, 6, -12)
+local stopTeleportPosition = Vector3.new(-630, 6, -12)
+
+-- Function to teleport to a position
+local function teleportToPosition(position)
+    if LocalPlayer and LocalPlayer.Character then
+        LocalPlayer.Character:MoveTo(position)
+    end
+end
+
+-- Function to handle special interaction with Gunner Jayce
+local function handleGunnerJayce(prompt)
+    wait(1)
+    teleportToPosition(prompt.Parent.Position) -- Teleport to the NPC again
+    wait(1)
+    fireproximityprompt(prompt)
+    wait(2)
+    local args = {
+        [1] = "DialogueChoice",
+        [2] = "Let me see."
+    }
+    game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+    fireproximityprompt(prompt)
+    teleportToPosition(safePosition)
+    wait(20)
+end
+
+-- Function to handle special interaction with The Leader
+local function handleTheLeader(prompt)
+    wait(1)
+    teleportToPosition(prompt.Parent.Position) -- Teleport to the NPC again
+    wait(1)
+    fireproximityprompt(prompt)
+    wait(2)
+    local args = {
+        [1] = "DialogueChoice",
+        [2] = "Any tips?"
+    }
+    game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+    wait(2)
+    args = {
+        [1] = "DialogueChoice",
+        [2] = "Trade?"
+    }
+    game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+    wait(1)
+    fireproximityprompt(prompt)
+    wait(1)
+    teleportToPosition(safePosition)
+    wait(15)
+end
+
+-- Check ClockTime and teleport to the safe zone if it's 1140
+local function checkClockTimeAndTeleport()
+    while true do
+        local clockTime = game.Lighting.ClockTime
+        if clockTime == 1140 then
+            teleportToPosition(safePosition)
+            wait(90)  -- Wait 90 seconds in the safe zone
+        end
+        wait(1)
+    end
+end
+
+-- Start checking ClockTime in a separate thread
+spawn(checkClockTimeAndTeleport)
+
+-- Function to handle special interaction with Coleman
+local function handleColeman(prompt)
+    wait(1)
+    teleportToPosition(prompt.Parent.Position) -- Teleport to the NPC again
+    wait(1)
+    fireproximityprompt(prompt)
+    wait(1)
+    local args = {
+        [1] = "DialogueChoice",
+        [2] = "Yes!"
+    }
+    game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+    wait(1)
+    fireproximityprompt(prompt)
+    wait(1)
+    teleportToPosition(safePosition)
+    wait(15)
+end
+
+-- Function to handle special interaction with Teuchi
+local function handleTeuchi(prompt)
+    wait(1)
+    teleportToPosition(prompt.Parent.Position) -- Teleport to the NPC again
+    wait(1)
+    fireproximityprompt(prompt)
+    wait(1)
+    local args = {
+        [1] = "DialogueChoice",
+        [2] = "Sure!"
+    }
+    game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+    wait(1)
+    fireproximityprompt(prompt)
+    wait(1)
+    teleportToPosition(safePosition)
+    wait(15)
+end
+
+-- Function to handle special interaction with Priest Jonathan
+local function handlePriestJonathan(prompt)
+    wait(1)
+    teleportToPosition(prompt.Parent.Position) -- Teleport to the NPC again
+    wait(1)
+    fireproximityprompt(prompt)
+    wait(1)
+    local args = {
+        [1] = "DialogueChoice",
+        [2] = "Yes!"
+    }
+    game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+    wait(1)
+    fireproximityprompt(prompt)
+    wait(1)
+    teleportToPosition(safePosition)
+    wait(15)
+end
+
+-- Claim storage function
+local function claimStorage()
+    teleportToPosition(startTeleportPosition)
+    wait(5)  -- Updated to wait 5 seconds
+    local args = {
+        [1] = "ClaimStorage",
+        [2] = workspace.Storages.Room
+    }
+    game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+end
+
+-- Function to fire the ProximityPrompt and check for specific prompts
+local function fireProximityPrompt()
+    for _, prompt in ipairs(workspace:GetDescendants()) do
+        if prompt:IsA("ProximityPrompt") then
+            if prompt.ActionText == "Open" and prompt.ObjectText == "Storage Door" then
+                fireproximityprompt(prompt)
+            elseif prompt.ActionText == "Interact" then
+                local objectText = prompt.ObjectText
+                if objectText == "Gunner Jayce" then
+                    teleportToPosition(prompt.Parent.Position)
+                    wait(1)
+                    teleportToPosition(prompt.Parent.Position) -- Teleport to the NPC again
+                    wait(1)
+                    handleGunnerJayce(prompt)
+                    return true  -- Exit the loop after handling Gunner Jayce
+                elseif objectText == "Coleman" or objectText == "Priest Jonathan" or objectText == "The Leader" then
+                    teleportToPosition(prompt.Parent.Position)
+                    wait(1)
+                    teleportToPosition(prompt.Parent.Position) -- Teleport to the NPC again
+                    wait(1)
+                    if objectText == "The Leader" then
+                        handleTheLeader(prompt)
+                    elseif objectText == "Coleman" then
+                        handleColeman(prompt)
+                    elseif objectText == "Priest Jonathan" then
+                        handlePriestJonathan(prompt)
+                    else
+                        wait(2)  -- Wait 2 seconds
+                    end
+                    return true  -- Exit the loop after finding the NPC
+                elseif objectText == "Teuchi" then
+                    teleportToPosition(prompt.Parent.Position)
+                    wait(1)
+                    teleportToPosition(prompt.Parent.Position) -- Teleport to the NPC again
+                    wait(1)
+                    handleTeuchi(prompt)
+                    return true  -- Exit the loop after handling Teuchi
+                end
+            end
+        end
+    end
+    return false  -- If no specified "Interact" ProximityPrompt was found
+end
+
+-- Function to execute teleport sets
+local function executeTeleportSet(positions)
+    local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if not humanoid then
+        return false
+    end
+    
+    local lastHealth = humanoid.Health
+
+    -- Function to check for damage
+    local function checkForDamage()
+        local currentHealth = humanoid.Health
+        if currentHealth < lastHealth then
+            teleportToPosition(safePosition)  -- Teleport to the safe zone
+            local args = {
+                [1] = "M1D",
+                [2] = CFrame.new(-62.24171447753906, -53.64665222167969, 38.52253723144531) * CFrame.Angles(-0.7050271034240723, -0.004734084475785494, -0.004028283525258303)
+            }
+            game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+            wait(90)  -- Wait 90 seconds
+            lastHealth = humanoid.Health  -- Update last health
+            return true
+        end
+        lastHealth = currentHealth  -- Update last health
+        return false
+    end
+
+    for _, pos in ipairs(positions) do
+        if not TeleportEnabled then 
+            return false 
+        end
+
+        if checkForDamage() then
+            return false
+        end
+
+        teleportToPosition(pos)
+        wait(0.5)  -- Extra wait before next teleport
+        wait(0.5)  -- Additional wait to make it a total of 1 second before the next teleport
+        if fireProximityPrompt() then
+            wait(1)  -- Wait 1 second after finding NPC
+            return true
+        end
+        wait(0.1)  -- 0.1-second wait before next teleport
+    end
+
+    return true
+end
+
+-- Main function to execute all teleports
+local function executeTeleports()
+    claimStorage()  -- Claim storage at the start
+    local primaryPositions = {
+        Vector3.new(-571, 6, -52),
+        Vector3.new(-428, 6, -25),
+        Vector3.new(-309, 6, -25),
+        Vector3.new(-357, 6, -129),
+        Vector3.new(-524, 6, -129),
+        Vector3.new(-548, 6, -206),
+        Vector3.new(-84, 6, -206),
+        Vector3.new(83, 6, -206),
+        Vector3.new(-84, 6, -129),
+        Vector3.new(83, 6, 52),
+        Vector3.new(84, 6, 51),
+        Vector3.new(83, 6, 129),
+        Vector3.new(-83, 6, 129),
+        Vector3.new(-83, 6, 206),
+        Vector3.new(357, 6, 206),
+        Vector3.new(476, 6, 207),
+        Vector3.new(524, 6, 129),
+        Vector3.new(356, 6, -52),
+        Vector3.new(523, 6, -51),
+        Vector3.new(523, 6, -130),
+        Vector3.new(356, 6, -206),
+        Vector3.new(523, 6, -206)
+    }
+
+    local secondaryPositions = {
+        Vector3.new(594, 5, 203),
+        Vector3.new(286, 5, 202),
+        Vector3.new(357, 6, 129),
+        Vector3.new(524, 6, 130),
+        Vector3.new(521, 6, -52),
+        Vector3.new(355, 6, -51),
+        Vector3.new(358, 6, -130),
+        Vector3.new(524, 6, -129),
+        Vector3.new(593, 5, -203),
+        Vector3.new(310, 6, -206)
+    }
+
+    local tertiaryPositions = {
+        Vector3.new(153, 5, -204),
+        Vector3.new(-153, 5, -203),
+        Vector3.new(85, 6, -129),
+        Vector3.new(83, 6, 53),
+        Vector3.new(-84, 6, 53),
+        Vector3.new(-82, 6, 130),
+        Vector3.new(85, 6, 129),
+        Vector3.new(130, 6, 206),
+        Vector3.new(-153, 5, 201)
+    }
+
+    local fourthPositions = {
+        Vector3.new(-610, 6, -65),
+        Vector3.new(-522, 6, -25),
+        Vector3.new(-356, 6, -53),
+        Vector3.new(-270, 6, -13),
+        Vector3.new(-271, 6, 89),
+        Vector3.new(-170, 6, 65),
+        Vector3.new(-171, 6, -89),
+        Vector3.new(-82, 6, -26),
+        Vector3.new(130, 6, -24),
+        Vector3.new(171, 6, -87),
+        Vector3.new(171, 6, 90),
+        Vector3.new(271, 6, 68),
+        Vector3.new(355, 6, 24),
+        Vector3.new(522, 6, 52),
+        Vector3.new(610, 6, -10),
+        Vector3.new(610, 6, -89)
+    }
+
+    while TeleportEnabled do
+        if not executeTeleportSet(primaryPositions) then return end
+        if not executeTeleportSet(secondaryPositions) then return end
+        if not executeTeleportSet(tertiaryPositions) then return end
+        if not executeTeleportSet(fourthPositions) then return end
+        teleportToPosition(safePosition)
+        wait(30)  -- Wait 30 seconds in the safe zone
+    end
+end
+
+-- Create a ScreenGui and a Button
+local screenGui = Instance.new("ScreenGui")
+screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local button = Instance.new("TextButton", screenGui)
+button.Size = UDim2.new(0, 200, 0, 50)
+button.Position = UDim2.new(1, -210, 0, 10)  -- Top right corner
+button.Text = "Start/Stop"
+button.BackgroundColor3 = Color3.fromRGB(0, 128, 255)  -- Make the button stand out
+button.TextColor3 = Color3.fromRGB(255, 255, 255)  -- White text
+button.BorderSizePixel = 2  -- Add a border for better visibility
+button.BorderColor3 = Color3.fromRGB(255, 255, 255)  -- White border
+
+local padsButton = Instance.new("TextButton", screenGui)
+padsButton.Size = UDim2.new(0, 95, 0, 50)
+padsButton.Position = UDim2.new(1, -310, 0, 70)  -- Below Start/Stop button
+padsButton.Text = "Pads"
+padsButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)  -- Green button
+padsButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- White text
+padsButton.BorderSizePixel = 2  -- Add a border for better visibility
+padsButton.BorderColor3 = Color3.fromRGB(255, 255, 255)  -- White border
+
+local stuffButton = Instance.new("TextButton", screenGui)
+stuffButton.Size = UDim2.new(0, 95, 0, 50)
+stuffButton.Position = UDim2.new(1, -210, 0, 70)  -- Below Start/Stop button next to Pads
+stuffButton.Text = "The Stuff"
+stuffButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)  -- Red button
+stuffButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- White text
+stuffButton.BorderSizePixel = 2  -- Add a border for better visibility
+stuffButton.BorderColor3 = Color3.fromRGB(255, 255, 255)  -- White border
+
+-- Toggle TeleportEnabled on button click
+button.MouseButton1Click:Connect(function()
+    TeleportEnabled = not TeleportEnabled
+    if TeleportEnabled then
+        teleportToPosition(startTeleportPosition)
+        wait(5)  -- Updated to wait 5 seconds
+        local args = {
+            [1] = "ClaimStorage",
+            [2] = workspace.Storages.Room
+        }
+        game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+        if not teleportCoroutine or coroutine.status(teleportCoroutine) == "dead" then
+            teleportCoroutine = coroutine.create(function()
+                while TeleportEnabled do
+                    executeTeleports()
+                end
+            end)
+            coroutine.resume(teleportCoroutine)
+        end
+    else
+        teleportToPosition(stopTeleportPosition)
+        if teleportCoroutine and coroutine.status(teleportCoroutine) == "running" then
+            coroutine.yield(teleportCoroutine)
+        end
+    end
+end)
+
+-- Pads button click event
+padsButton.MouseButton1Click:Connect(function()
+    local args = {
+        [1] = "StoreBank",
+        [2] = "Ten",
+        [3] = "5"
+    }
+    game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+end)
+
+-- The Stuff button click event
+stuffButton.MouseButton1Click:Connect(function()
+    local args = {
+        [1] = "StoreBank",
+        [2] = "Eleven",
+        [3] = "5"
+    }
+    game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+end)
+
+-- Detect if the player is damaged in the safe zone and teleport to emergency position
+local function monitorHealth()
+    local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.HealthChanged:Connect(function()
+            if humanoid.Health < humanoid.MaxHealth then
+                teleportToPosition(safePosition)
+                wait(1) -- Add a small delay to ensure teleportation
+                teleportToPosition(emergencyPosition)
+                local args = {
+                    [1] = "M1D",
+                    [2] = CFrame.new(-62.24171447753906, -53.64665222167969, 38.52253723144531) * CFrame.Angles(-0.7050271034240723, -0.004734084475785494, -0.004028283525258303)
+                }
+                game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+            end
+        end)
+    end
+end
+
+-- Start monitoring health changes
+monitorHealth()
