@@ -1,11 +1,9 @@
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
-local TeleportEnabled = false
-local teleportCoroutine
+local TeleportEnabled = false  -- Initially set to false
 local safePosition = Vector3.new(166, -0, -956)
-local emergencyPosition = Vector3.new(-532, -0, -585)
 local startTeleportPosition = Vector3.new(-609, 6, -12)
-local stopTeleportPosition = Vector3.new(-630, 6, -12)
+local stopPosition = startTeleportPosition  -- Use the start position as the stop position
 
 -- Function to teleport to a position
 local function teleportToPosition(position)
@@ -56,20 +54,54 @@ local function handleTheLeader(prompt)
     wait(15)
 end
 
--- Check ClockTime and teleport to the safe zone if it's 1140
-local function checkClockTimeAndTeleport()
-    while true do
-        local clockTime = game.Lighting.ClockTime
-        if clockTime == 1140 then
-            teleportToPosition(safePosition)
-            wait(90)  -- Wait 90 seconds in the safe zone
+-- Function to claim storage
+local function claimStorage()
+    teleportToPosition(startTeleportPosition)
+    wait(10)  -- Updated to wait 10 seconds
+    local args = {
+        [1] = "ClaimStorage",
+        [2] = workspace.Storages.Room
+    }
+    game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+end
+
+-- Function to repeatedly equip the item in the second slot every 10 seconds
+local function loopEquipSecondSlotItem()
+    while TeleportEnabled do
+        if LocalPlayer and LocalPlayer.Backpack then
+            local backpackItems = LocalPlayer.Backpack:GetChildren()
+            if #backpackItems >= 2 then
+                local secondSlotItem = backpackItems[2]  -- Get the second item in the backpack
+                if secondSlotItem and secondSlotItem:IsA("Tool") then
+                    LocalPlayer.Character.Humanoid:EquipTool(secondSlotItem)
+                end
+            end
         end
-        wait(1)
+        wait(10)  -- Loop every 10 seconds
     end
 end
 
--- Start checking ClockTime in a separate thread
-spawn(checkClockTimeAndTeleport)
+-- Function to execute the pads and stuff actions
+local function executePadsAndStuff()
+    while TeleportEnabled do
+        local argsPads = {
+            [1] = "StoreBank",
+            [2] = "Ten",
+            [3] = "10"  -- Updated the number to 10
+        }
+        game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(argsPads))
+
+        local argsStuff = {
+            [1] = "StoreBank",
+            [2] = "Eleven",
+            [3] = "10"  -- Updated the number to 10
+        }
+        game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(argsStuff))
+
+        wait(0.5)  -- Loop every 0.5 seconds
+    end
+end
+
 
 -- Function to handle special interaction with Coleman
 local function handleColeman(prompt)
@@ -128,16 +160,42 @@ local function handlePriestJonathan(prompt)
     wait(15)
 end
 
--- Claim storage function
-local function claimStorage()
-    teleportToPosition(startTeleportPosition)
-    wait(5)  -- Updated to wait 5 seconds
-    local args = {
-        [1] = "ClaimStorage",
-        [2] = workspace.Storages.Room
-    }
-    game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+-- Function to check clock time and teleport to the safe zone if it's 1140
+local function checkClockTimeAndTeleport()
+    while TeleportEnabled do
+        local clockTime = game.Lighting.ClockTime
+        if clockTime == 1140 then
+            teleportToPosition(safePosition)
+            wait(90)  -- Wait 90 seconds in the safe zone
+        end
+        wait(1)
+    end
 end
+
+-- Start checking clock time in a separate thread
+spawn(checkClockTimeAndTeleport)
+
+-- Function to monitor health changes and teleport to the safe zone if damaged
+local function monitorHealth()
+    local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        humanoid.HealthChanged:Connect(function()
+            if humanoid.Health < humanoid.MaxHealth then
+                teleportToPosition(safePosition)  -- Teleport to safe zone
+                wait(1)  -- Add a small delay to ensure teleportation
+                teleportToPosition(safePosition)
+                local args = {
+                    [1] = "M1D",
+                    [2] = CFrame.new(-62.24171447753906, -53.64665222167969, 38.52253723144531) * CFrame.Angles(-0.7050271034240723, -0.004734084475785494, -0.004028283525258303)
+                }
+                game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+            end
+        end)
+    end
+end
+
+-- Start monitoring health changes
+monitorHealth()
 
 -- Function to fire the ProximityPrompt and check for specific prompts
 local function fireProximityPrompt()
@@ -183,13 +241,45 @@ local function fireProximityPrompt()
     return false  -- If no specified "Interact" ProximityPrompt was found
 end
 
+-- Create buttons for starting/stopping teleportation
+local function createButtons()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+    local teleportButton = Instance.new("TextButton", screenGui)
+    teleportButton.Size = UDim2.new(0, 200, 0, 50)
+    teleportButton.Position = UDim2.new(1, -210, 0, 60)  -- Position the button appropriately
+    teleportButton.Text = "Start Teleportation"
+    teleportButton.BackgroundColor3 = Color3.fromRGB(0, 255, 128)  -- Make the button stand out
+    teleportButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- White text
+    teleportButton.BorderSizePixel = 2  -- Add a border for better visibility
+    teleportButton.BorderColor3 = Color3.fromRGB(255, 255, 255)  -- White border
+
+    -- Connect the teleport button press event to start/stop teleportation
+    teleportButton.MouseButton1Click:Connect(function()
+        TeleportEnabled = not TeleportEnabled
+        if TeleportEnabled then
+            teleportButton.Text = "Stop Teleportation"
+            spawn(mainLoop)  -- Start teleportation
+            spawn(loopEquipSecondSlotItem)  -- Start equipping the second slot item
+            spawn(executePadsAndStuff)  -- Start executing pads and stuff actions
+        else
+            teleportButton.Text = "Start Teleportation"
+            teleportToPosition(stopPosition)  -- Teleport to the stop position
+        end
+    end)
+end
+
+-- Create the buttons
+createButtons()
+
 -- Function to execute teleport sets
 local function executeTeleportSet(positions)
     local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
     if not humanoid then
         return false
     end
-    
+
     local lastHealth = humanoid.Health
 
     -- Function to check for damage
@@ -219,6 +309,11 @@ local function executeTeleportSet(positions)
             return false
         end
 
+        -- First teleport
+        teleportToPosition(pos)
+        wait(0.1)  -- Quick wait before next teleport
+
+        -- Second teleport
         teleportToPosition(pos)
         wait(0.5)  -- Extra wait before next teleport
         wait(0.5)  -- Additional wait to make it a total of 1 second before the next teleport
@@ -246,13 +341,11 @@ local function executeTeleports()
         Vector3.new(83, 6, -206),
         Vector3.new(-84, 6, -129),
         Vector3.new(83, 6, 52),
-        Vector3.new(84, 6, 51),
         Vector3.new(83, 6, 129),
         Vector3.new(-83, 6, 129),
         Vector3.new(-83, 6, 206),
         Vector3.new(357, 6, 206),
         Vector3.new(476, 6, 207),
-        Vector3.new(524, 6, 129),
         Vector3.new(356, 6, -52),
         Vector3.new(523, 6, -51),
         Vector3.new(523, 6, -130),
@@ -263,12 +356,9 @@ local function executeTeleports()
     local secondaryPositions = {
         Vector3.new(594, 5, 203),
         Vector3.new(286, 5, 202),
-        Vector3.new(357, 6, 129),
-        Vector3.new(524, 6, 130),
         Vector3.new(521, 6, -52),
         Vector3.new(355, 6, -51),
         Vector3.new(358, 6, -130),
-        Vector3.new(524, 6, -129),
         Vector3.new(593, 5, -203),
         Vector3.new(310, 6, -206)
     }
@@ -310,106 +400,35 @@ local function executeTeleports()
         if not executeTeleportSet(tertiaryPositions) then return end
         if not executeTeleportSet(fourthPositions) then return end
         teleportToPosition(safePosition)
-        wait(30)  -- Wait 30 seconds in the safe zone
+        wait(10)  -- Updated to wait 10 seconds in the safe zone
     end
 end
 
--- Create a ScreenGui and a Button
-local screenGui = Instance.new("ScreenGui")
-screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
 
-local button = Instance.new("TextButton", screenGui)
-button.Size = UDim2.new(0, 200, 0, 50)
-button.Position = UDim2.new(1, -210, 0, 10)  -- Top right corner
-button.Text = "Start/Stop"
-button.BackgroundColor3 = Color3.fromRGB(0, 128, 255)  -- Make the button stand out
-button.TextColor3 = Color3.fromRGB(255, 255, 255)  -- White text
-button.BorderSizePixel = 2  -- Add a border for better visibility
-button.BorderColor3 = Color3.fromRGB(255, 255, 255)  -- White border
-
-local padsButton = Instance.new("TextButton", screenGui)
-padsButton.Size = UDim2.new(0, 95, 0, 50)
-padsButton.Position = UDim2.new(1, -310, 0, 70)  -- Below Start/Stop button
-padsButton.Text = "Pads"
-padsButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)  -- Green button
-padsButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- White text
-padsButton.BorderSizePixel = 2  -- Add a border for better visibility
-padsButton.BorderColor3 = Color3.fromRGB(255, 255, 255)  -- White border
-
-local stuffButton = Instance.new("TextButton", screenGui)
-stuffButton.Size = UDim2.new(0, 95, 0, 50)
-stuffButton.Position = UDim2.new(1, -210, 0, 70)  -- Below Start/Stop button next to Pads
-stuffButton.Text = "The Stuff"
-stuffButton.BackgroundColor3 = Color3.fromRGB(200, 0, 0)  -- Red button
-stuffButton.TextColor3 = Color3.fromRGB(255, 255, 255)  -- White text
-stuffButton.BorderSizePixel = 2  -- Add a border for better visibility
-stuffButton.BorderColor3 = Color3.fromRGB(255, 255, 255)  -- White border
-
--- Toggle TeleportEnabled on button click
-button.MouseButton1Click:Connect(function()
-    TeleportEnabled = not TeleportEnabled
-    if TeleportEnabled then
-        teleportToPosition(startTeleportPosition)
-        wait(5)  -- Updated to wait 5 seconds
-        local args = {
-            [1] = "ClaimStorage",
-            [2] = workspace.Storages.Room
-        }
-        game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
-        if not teleportCoroutine or coroutine.status(teleportCoroutine) == "dead" then
-            teleportCoroutine = coroutine.create(function()
-                while TeleportEnabled do
-                    executeTeleports()
-                end
-            end)
-            coroutine.resume(teleportCoroutine)
+-- Main execution loop
+local function mainLoop()
+    while true do
+        if TeleportEnabled then
+            executeTeleports()  -- Perform teleport actions
         end
-    else
-        teleportToPosition(stopTeleportPosition)
-        if teleportCoroutine and coroutine.status(teleportCoroutine) == "running" then
-            coroutine.yield(teleportCoroutine)
-        end
-    end
-end)
 
--- Pads button click event
-padsButton.MouseButton1Click:Connect(function()
-    local args = {
-        [1] = "StoreBank",
-        [2] = "Ten",
-        [3] = "5"
-    }
-    game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
-end)
-
--- The Stuff button click event
-stuffButton.MouseButton1Click:Connect(function()
-    local args = {
-        [1] = "StoreBank",
-        [2] = "Eleven",
-        [3] = "5"
-    }
-    game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
-end)
-
--- Detect if the player is damaged in the safe zone and teleport to emergency position
-local function monitorHealth()
-    local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        humanoid.HealthChanged:Connect(function()
-            if humanoid.Health < humanoid.MaxHealth then
-                teleportToPosition(safePosition)
-                wait(1) -- Add a small delay to ensure teleportation
-                teleportToPosition(emergencyPosition)
-                local args = {
-                    [1] = "M1D",
-                    [2] = CFrame.new(-62.24171447753906, -53.64665222167969, 38.52253723144531) * CFrame.Angles(-0.7050271034240723, -0.004734084475785494, -0.004028283525258303)
-                }
-                game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
-            end
-        end)
+        -- Ensure actions are executed every 10 seconds
+        wait(10)
     end
 end
 
--- Start monitoring health changes
-monitorHealth()
+-- Start the main loop
+spawn(mainLoop)
+
+-- Function to repeatedly equip the item in the second slot every 10 seconds
+local function loopEquipSecondSlotItem()
+    while TeleportEnabled do
+        equipSecondSlotItem()
+        wait(10)  -- Loop every 10 seconds
+    end
+end
+
+-- Start looping the equip second slot item function when teleportation starts
+spawn(loopEquipSecondSlotItem)
+-- Start executing pads and stuff actions when teleportation starts
+spawn(executePadsAndStuff)
