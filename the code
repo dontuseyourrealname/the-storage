@@ -3,7 +3,7 @@ local LocalPlayer = Players.LocalPlayer
 local TeleportEnabled = false  -- Initially set to false
 local safePosition = Vector3.new(166, -0, -956)
 local startTeleportPosition = Vector3.new(-609, 6, -12)
-local stopPosition = startTeleportPosition  -- Use the start position as the stop position
+local stopPosition = Vector3.new(-632, 6, -12)  -- Updated the stop position
 
 -- Function to teleport to a position
 local function teleportToPosition(position)
@@ -102,7 +102,6 @@ local function executePadsAndStuff()
     end
 end
 
-
 -- Function to handle special interaction with Coleman
 local function handleColeman(prompt)
     wait(1)
@@ -184,11 +183,6 @@ local function monitorHealth()
                 teleportToPosition(safePosition)  -- Teleport to safe zone
                 wait(1)  -- Add a small delay to ensure teleportation
                 teleportToPosition(safePosition)
-                local args = {
-                    [1] = "M1D",
-                    [2] = CFrame.new(-62.24171447753906, -53.64665222167969, 38.52253723144531) * CFrame.Angles(-0.7050271034240723, -0.004734084475785494, -0.004028283525258303)
-                }
-                game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
             end
         end)
     end
@@ -265,7 +259,7 @@ local function createButtons()
             spawn(executePadsAndStuff)  -- Start executing pads and stuff actions
         else
             teleportButton.Text = "Start Teleportation"
-            teleportToPosition(stopPosition)  -- Teleport to the stop position
+            teleportToPosition(Vector3.new(-632, 6, -12))  -- Teleport to the specified position when stopped
         end
     end)
 end
@@ -287,11 +281,6 @@ local function executeTeleportSet(positions)
         local currentHealth = humanoid.Health
         if currentHealth < lastHealth then
             teleportToPosition(safePosition)  -- Teleport to the safe zone
-            local args = {
-                [1] = "M1D",
-                [2] = CFrame.new(-62.24171447753906, -53.64665222167969, 38.52253723144531) * CFrame.Angles(-0.7050271034240723, -0.004734084475785494, -0.004028283525258303)
-            }
-            game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
             wait(90)  -- Wait 90 seconds
             lastHealth = humanoid.Health  -- Update last health
             return true
@@ -400,10 +389,9 @@ local function executeTeleports()
         if not executeTeleportSet(tertiaryPositions) then return end
         if not executeTeleportSet(fourthPositions) then return end
         teleportToPosition(safePosition)
-        wait(10)  -- Updated to wait 10 seconds in the safe zone
+        wait(40)  -- Wait 40 seconds in the safe zone
     end
 end
-
 
 -- Main execution loop
 local function mainLoop()
