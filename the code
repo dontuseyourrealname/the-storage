@@ -11,6 +11,7 @@ print("Script loaded successfully")
 local function teleportToPosition(position)
     if LocalPlayer and LocalPlayer.Character then
         LocalPlayer.Character:MoveTo(position)
+        print("Teleported to position:", position)
     end
 end
 
@@ -20,12 +21,14 @@ local function handleGunnerJayce(prompt)
     teleportToPosition(prompt.Parent.Position) -- Teleport to the NPC again
     wait(1)
     fireproximityprompt(prompt)
+    print("Interacting with Gunner Jayce")
     wait(2)
     local args = {
         [1] = "DialogueChoice",
         [2] = "Let me see."
     }
     game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+    print("Fired DialogueChoice for Gunner Jayce")
     fireproximityprompt(prompt)
     teleportToPosition(safePosition)
     wait(20)
@@ -37,18 +40,21 @@ local function handleTheLeader(prompt)
     teleportToPosition(prompt.Parent.Position) -- Teleport to the NPC again
     wait(1)
     fireproximityprompt(prompt)
+    print("Interacting with The Leader")
     wait(2)
     local args = {
         [1] = "DialogueChoice",
         [2] = "Any tips?"
     }
     game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+    print("Fired DialogueChoice for The Leader - Any tips?")
     wait(2)
     args = {
         [1] = "DialogueChoice",
         [2] = "Trade?"
     }
     game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+    print("Fired DialogueChoice for The Leader - Trade?")
     wait(1)
     fireproximityprompt(prompt)
     wait(1)
@@ -65,6 +71,7 @@ local function claimStorage()
         [2] = workspace.Storages.Room
     }
     game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+    print("Claimed storage")
 end
 
 -- Function to repeatedly equip the item in the second slot every 15 seconds
@@ -76,6 +83,7 @@ local function loopEquipSecondSlotItem()
                 local secondSlotItem = backpackItems[2]  -- Get the second item in the backpack
                 if secondSlotItem and secondSlotItem:IsA("Tool") then
                     LocalPlayer.Character.Humanoid:EquipTool(secondSlotItem)
+                    print("Equipped second slot item:", secondSlotItem.Name)
                 end
             end
         end
@@ -85,24 +93,26 @@ end
 
 -- Function to execute the list of actions in sequence, with a 1-second delay between each
 local function executeStoreBankActions()
-    local actions = {
-        {"StoreBank", "Eight", "10"},
-        {"StoreBank", "Four", "10"},
-        {"StoreBank", "Five", "10"},
-        {"StoreBank", "Six", "10"},
-        {"StoreBank", "Thirteen", "10"},
-        {"StoreBank", "Fourteen", "10"},
-        {"StoreBank", "Eleven", "10"},
-        {"StoreBank", "Nine", "10"},
-        {"StoreBank", "Ten", "10"},
-        {"StoreBank", "Twelve", "1"},
-        {"StoreBank", "Two", "1"}
-    }
+    while TeleportEnabled do
+        local actions = {
+            {"StoreBank", "Eight", "10"},
+            {"StoreBank", "Four", "10"},
+            {"StoreBank", "Five", "10"},
+            {"StoreBank", "Six", "10"},
+            {"StoreBank", "Thirteen", "10"},
+            {"StoreBank", "Fourteen", "10"},
+            {"StoreBank", "Eleven", "10"},
+            {"StoreBank", "Nine", "10"},
+            {"StoreBank", "Ten", "10"},
+            {"StoreBank", "Twelve", "1"},
+            {"StoreBank", "Two", "1"}
+        }
 
-    for _, args in ipairs(actions) do
-        print("Firing server with args:", args[1], args[2], args[3])  -- Debug print statement
-        game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
-        wait(1)  -- Wait 1 second before executing the next action
+        for _, args in ipairs(actions) do
+            print("Firing server with args:", args[1], args[2], args[3])  -- Debug print statement
+            game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+            wait(1)  -- Wait 1 second before executing the next action
+        end
     end
 end
 
@@ -112,12 +122,14 @@ local function handleColeman(prompt)
     teleportToPosition(prompt.Parent.Position) -- Teleport to the NPC again
     wait(1)
     fireproximityprompt(prompt)
+    print("Interacting with Coleman")
     wait(1)
     local args = {
         [1] = "DialogueChoice",
         [2] = "Yes!"
     }
     game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+    print("Fired DialogueChoice for Coleman")
     wait(1)
     fireproximityprompt(prompt)
     wait(1)
@@ -131,12 +143,14 @@ local function handleTeuchi(prompt)
     teleportToPosition(prompt.Parent.Position) -- Teleport to the NPC again
     wait(1)
     fireproximityprompt(prompt)
+    print("Interacting with Teuchi")
     wait(1)
     local args = {
         [1] = "DialogueChoice",
         [2] = "Sure!"
     }
     game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+    print("Fired DialogueChoice for Teuchi")
     wait(1)
     fireproximityprompt(prompt)
     wait(1)
@@ -150,12 +164,14 @@ local function handlePriestJonathan(prompt)
     teleportToPosition(prompt.Parent.Position) -- Teleport to the NPC again
     wait(1)
     fireproximityprompt(prompt)
+    print("Interacting with Priest Jonathan")
     wait(1)
     local args = {
         [1] = "DialogueChoice",
         [2] = "Yes!"
     }
     game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+    print("Fired DialogueChoice for Priest Jonathan")
     wait(1)
     fireproximityprompt(prompt)
     wait(1)
@@ -169,6 +185,7 @@ local function checkClockTimeAndTeleport()
         local clockTime = game.Lighting.ClockTime
         if clockTime == 1140 then
             teleportToPosition(safePosition)
+            print("Teleporting to safe zone at 1140")
             wait(90)  -- Wait 90 seconds in the safe zone
         end
         wait(1)
@@ -178,29 +195,13 @@ end
 -- Start checking clock time in a separate thread
 spawn(checkClockTimeAndTeleport)
 
--- Function to monitor health changes and teleport to the safe zone if damaged
-local function monitorHealth()
-    local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        humanoid.HealthChanged:Connect(function()
-            if humanoid.Health < humanoid.MaxHealth then
-                teleportToPosition(safePosition)  -- Teleport to safe zone
-                wait(1)  -- Add a small delay to ensure teleportation
-                teleportToPosition(safePosition)
-            end
-        end)
-    end
-end
-
--- Start monitoring health changes
-monitorHealth()
-
 -- Function to fire the ProximityPrompt and check for specific prompts
 local function fireProximityPrompt()
     for _, prompt in ipairs(workspace:GetDescendants()) do
         if prompt:IsA("ProximityPrompt") then
             if prompt.ActionText == "Open" and prompt.ObjectText == "Storage Door" then
                 fireproximityprompt(prompt)
+                print("Fired ProximityPrompt for Storage Door")
             elseif prompt.ActionText == "Interact" then
                 local objectText = prompt.ObjectText
                 if objectText == "Gunner Jayce" then
@@ -221,8 +222,6 @@ local function fireProximityPrompt()
                         handleColeman(prompt)
                     elseif objectText == "Priest Jonathan" then
                         handlePriestJonathan(prompt)
-                    else
-                        wait(2)  -- Wait 2 seconds
                     end
                     return true  -- Exit the loop after finding the NPC
                 elseif objectText == "Teuchi" then
@@ -289,6 +288,7 @@ local function executeTeleportSet(positions)
         local currentHealth = humanoid.Health
         if currentHealth < lastHealth then
             teleportToPosition(safePosition)  -- Teleport to the safe zone
+            print("Health dropped, teleporting to safe zone")
             wait(90)  -- Wait 90 seconds
             lastHealth = humanoid.Health  -- Update last health
             return true
@@ -308,10 +308,12 @@ local function executeTeleportSet(positions)
 
         -- First teleport
         teleportToPosition(pos)
+        print("Teleported to position:", pos)
         wait(0.1)  -- Quick wait before next teleport
 
         -- Second teleport
         teleportToPosition(pos)
+        print("Teleported again to position:", pos)
         wait(0.5)  -- Extra wait before next teleport
         wait(0.5)  -- Additional wait to make it a total of 1 second before the next teleport
         if fireProximityPrompt() then
@@ -417,36 +419,3 @@ end
 
 -- Start the main loop
 spawn(mainLoop)
-
--- Function to monitor health and fire the specified remote event if health hasn't regenerated
-local function monitorHealthAndFireEvent()
-    local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        while TeleportEnabled do
-            if humanoid.Health < humanoid.MaxHealth then
-                local startTime = tick()
-                while TeleportEnabled and (tick() - startTime) >= 60 do  -- Check if 60 seconds have passed
-                    if humanoid.Health >= humanoid.MaxHealth then
-                        break  -- Break the loop if health regenerates
-                    end
-
-                    local args = {
-                        [1] = "M1D",
-                        [2] = CFrame.new(-608.3916625976562, -47.14999771118164, 5.913726806640625) * CFrame.Angles(-0.6518704891204834, 0.06418752670288086, 0.04891268163919449)
-                    }
-                    game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
-                    wait(15)  -- Wait 15 seconds before firing the event again
-                end
-            end
-            wait(1)  -- Check health every second
-        end
-    end
-end
-
--- Start monitoring health changes and firing the event when teleportation starts
-spawn(monitorHealthAndFireEvent)
-
--- Start looping the equip second slot item function when teleportation starts
-spawn(loopEquipSecondSlotItem)
--- Start executing the store bank actions when teleportation starts
-spawn(executeStoreBankActions)
