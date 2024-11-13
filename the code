@@ -5,6 +5,8 @@ local safePosition = Vector3.new(166, -0, -956)
 local startTeleportPosition = Vector3.new(-609, 6, -12)
 local stopPosition = Vector3.new(-632, 6, -12)  -- Updated the stop position
 
+print("Script loaded successfully")
+
 -- Function to teleport to a position
 local function teleportToPosition(position)
     if LocalPlayer and LocalPlayer.Character then
@@ -65,7 +67,7 @@ local function claimStorage()
     game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
 end
 
--- Function to repeatedly equip the item in the second slot every 10 seconds
+-- Function to repeatedly equip the item in the second slot every 15 seconds
 local function loopEquipSecondSlotItem()
     while TeleportEnabled do
         if LocalPlayer and LocalPlayer.Backpack then
@@ -77,28 +79,30 @@ local function loopEquipSecondSlotItem()
                 end
             end
         end
-        wait(10)  -- Loop every 10 seconds
+        wait(15)  -- Loop every 15 seconds
     end
 end
 
--- Function to execute the pads and stuff actions
-local function executePadsAndStuff()
-    while TeleportEnabled do
-        local argsPads = {
-            [1] = "StoreBank",
-            [2] = "Ten",
-            [3] = "10"  -- Updated the number to 10
-        }
-        game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(argsPads))
+-- Function to execute the list of actions in sequence, with a 1-second delay between each
+local function executeStoreBankActions()
+    local actions = {
+        {"StoreBank", "Eight", "10"},
+        {"StoreBank", "Four", "10"},
+        {"StoreBank", "Five", "10"},
+        {"StoreBank", "Six", "10"},
+        {"StoreBank", "Thirteen", "10"},
+        {"StoreBank", "Fourteen", "10"},
+        {"StoreBank", "Eleven", "10"},
+        {"StoreBank", "Nine", "10"},
+        {"StoreBank", "Ten", "10"},
+        {"StoreBank", "Twelve", "1"},
+        {"StoreBank", "Two", "1"}
+    }
 
-        local argsStuff = {
-            [1] = "StoreBank",
-            [2] = "Eleven",
-            [3] = "10"  -- Updated the number to 10
-        }
-        game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(argsStuff))
-
-        wait(0.5)  -- Loop every 0.5 seconds
+    for _, args in ipairs(actions) do
+        print("Firing server with args:", args[1], args[2], args[3])  -- Debug print statement
+        game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+        wait(1)  -- Wait 1 second before executing the next action
     end
 end
 
@@ -249,16 +253,20 @@ local function createButtons()
     teleportButton.BorderSizePixel = 2  -- Add a border for better visibility
     teleportButton.BorderColor3 = Color3.fromRGB(255, 255, 255)  -- White border
 
+    print("Button created")
+
     -- Connect the teleport button press event to start/stop teleportation
     teleportButton.MouseButton1Click:Connect(function()
         TeleportEnabled = not TeleportEnabled
         if TeleportEnabled then
             teleportButton.Text = "Stop Teleportation"
+            print("Teleportation started")
             spawn(mainLoop)  -- Start teleportation
             spawn(loopEquipSecondSlotItem)  -- Start equipping the second slot item
-            spawn(executePadsAndStuff)  -- Start executing pads and stuff actions
+            spawn(executeStoreBankActions)  -- Start executing store bank actions
         else
             teleportButton.Text = "Start Teleportation"
+            print("Teleportation stopped")
             teleportToPosition(Vector3.new(-632, 6, -12))  -- Teleport to the specified position when stopped
         end
     end)
@@ -398,25 +406,47 @@ local function mainLoop()
     while true do
         if TeleportEnabled then
             executeTeleports()  -- Perform teleport actions
-        end
 
-        -- Ensure actions are executed every 10 seconds
-        wait(10)
+            -- Ensure actions are executed every 10 seconds
+            wait(10)
+        else
+            wait(1)  -- Wait 1 second before checking again
+        end
     end
 end
 
 -- Start the main loop
 spawn(mainLoop)
 
--- Function to repeatedly equip the item in the second slot every 10 seconds
-local function loopEquipSecondSlotItem()
-    while TeleportEnabled do
-        equipSecondSlotItem()
-        wait(10)  -- Loop every 10 seconds
+-- Function to monitor health and fire the specified remote event if health hasn't regenerated
+local function monitorHealthAndFireEvent()
+    local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        while TeleportEnabled do
+            if humanoid.Health < humanoid.MaxHealth then
+                local startTime = tick()
+                while TeleportEnabled and (tick() - startTime) >= 60 do  -- Check if 60 seconds have passed
+                    if humanoid.Health >= humanoid.MaxHealth then
+                        break  -- Break the loop if health regenerates
+                    end
+
+                    local args = {
+                        [1] = "M1D",
+                        [2] = CFrame.new(-608.3916625976562, -47.14999771118164, 5.913726806640625) * CFrame.Angles(-0.6518704891204834, 0.06418752670288086, 0.04891268163919449)
+                    }
+                    game:GetService("ReplicatedStorage").RemoteEvent:FireServer(unpack(args))
+                    wait(15)  -- Wait 15 seconds before firing the event again
+                end
+            end
+            wait(1)  -- Check health every second
+        end
     end
 end
 
+-- Start monitoring health changes and firing the event when teleportation starts
+spawn(monitorHealthAndFireEvent)
+
 -- Start looping the equip second slot item function when teleportation starts
 spawn(loopEquipSecondSlotItem)
--- Start executing pads and stuff actions when teleportation starts
-spawn(executePadsAndStuff)
+-- Start executing the store bank actions when teleportation starts
+spawn(executeStoreBankActions)
